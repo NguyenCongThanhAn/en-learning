@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package ansida.englearning.server;
+package server;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -12,10 +12,10 @@ import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class ChatServer {
+public class Server {
     public static final int PORT = 31323;
     public static final ExecutorService es = Executors.newCachedThreadPool();
-    private static final Logger logger = Logger.getLogger(ChatServer.class.getName());
+    private static final Logger logger = Logger.getLogger(Server.class.getName());
 
     public static void main(String[] args) {
         logger.log(Level.INFO, "Server đang khởi động tại cổng {0}...", PORT);
@@ -33,7 +33,7 @@ public class ChatServer {
             logger.log(Level.SEVERE, "Lỗi ServerSocket hoặc ngắt kết nối đột ngột", ex);
         } finally {
             es.shutdown();
-            logger.log(Level.INFO, "Server đã dừng hoạt động.");
+            logger.log(Level.INFO, "Server shutdown.");
         }
     }
 }
