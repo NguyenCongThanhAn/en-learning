@@ -4,8 +4,8 @@
  */
 package server;
 
-import common.Message;
-import common.MessageType;
+import common.Request;
+import common.RequestType;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,7 +17,7 @@ public class SingleSourceOfTruth {
     private final ConcurrentHashMap<String, ClientHandler> clients = new ConcurrentHashMap<>();
     
     // Quản lý lịch sử tin nhắn dạng List đối tượng Message (Thread-safe)
-    private final List<Message> chatHistory = new CopyOnWriteArrayList<>();
+    private final List<Request> chatHistory = new CopyOnWriteArrayList<>();
     
     // Singleton Instance
     private static final SingleSourceOfTruth instance = new SingleSourceOfTruth();
@@ -53,10 +53,10 @@ public class SingleSourceOfTruth {
     /**
      * Thêm một đối tượng Message vào lịch sử hệ thống
      */
-    public void addMessageToLog(Message message) {
+    public void addMessageToLog(Request message) {
         // Chỉ lưu tin nhắn văn bản (CHAT) hoặc thông báo hệ thống (SYSTEM)
         // Hạn chế lưu FILE trực tiếp vào RAM để tránh tràn bộ nhớ
-        if (message.getType() == MessageType.CHAT || message.getType() == MessageType.SYSTEM) {
+        if (message.getType() == RequestType.CHAT || message.getType() == RequestType.SYSTEM) {
             chatHistory.add(message);
         }
     }
@@ -64,7 +64,7 @@ public class SingleSourceOfTruth {
     /**
      * Lấy danh sách toàn bộ lịch sử tin nhắn
      */
-    public List<Message> getChatHistory() {
+    public List<Request> getChatHistory() {
         return chatHistory;
     }
 }
