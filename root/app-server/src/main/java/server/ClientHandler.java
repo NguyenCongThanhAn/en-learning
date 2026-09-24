@@ -5,25 +5,27 @@
 package server;
 
 import common.LoginPayload;
+import common.QuestionPayload;
 import common.Request;
 import common.RequestType;
 import common.Response;
 import common.StatusCode;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import server.api.UserService;
+import server.util.SocketPayloadUtil;
 
 /**
  *
  * @author PC
  */
 public class ClientHandler implements Runnable {
+
+    private static QuestionBank bank = new QuestionBank();
 
     private String id;
     private Socket socket;
@@ -67,14 +69,22 @@ public class ClientHandler implements Runnable {
                         LoginPayload login = LoginPayload.fromBytes(request.getData());
                         boolean b = UserService.getInstance().register(login.getUsername(), login.getPassword());
                         if (b) {
-                            
+
                         }
                     }
-                    case
+                    case GET_QUIZ -> {
+                        QuestionPayload currentQuestion = bank.getRandomQuestion();
+
+                        if (currentQuestion != null) {
+                            // Sử dụng Class Util của bạn ở câu hỏi trước để gửi dữ liệu đi
+                            SocketPayloadUtil.sendPayload(socket, currentQuestion);
+                            System.out.println("Đã gửi câu hỏi ngẫu nhiên cho người chơi.");
+                        }
+                    }
                 }
             }
         } catch (Exception e) {
-            ca
+
         }
     }
 

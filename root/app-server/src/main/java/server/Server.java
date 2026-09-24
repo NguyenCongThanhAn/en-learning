@@ -18,6 +18,7 @@ public class Server {
     private static final Logger logger = Logger.getLogger(Server.class.getName());
 
     public static void main(String[] args) {
+        
         logger.log(Level.INFO, "Server đang khởi động tại cổng {0}...", PORT);
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
