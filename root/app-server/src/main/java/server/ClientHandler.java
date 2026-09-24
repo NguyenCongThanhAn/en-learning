@@ -4,8 +4,11 @@
  */
 package server;
 
+import common.LoginPayload;
 import common.Request;
 import common.RequestType;
+import common.Response;
+import common.StatusCode;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileOutputStream;
@@ -14,6 +17,7 @@ import java.net.Socket;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import server.api.UserService;
 
 /**
  *
@@ -41,22 +45,36 @@ public class ClientHandler implements Runnable {
         try {
             while (true) {
                 Request request = Request.readFromStream(dis);
-                byte b = request.getType();
-                if (b == RequestType.LOGIN.toByte()) {
-                    // Authentication
-                    // Require JDBC
-                } else if (b == RequestType.GET_LEADERBOARD.toByte()) {
-                    
-                } else if (b == RequestType.GET_QUIZ.toByte()) {
-                    
-                } else if (b == RequestType.REGISTER.toByte()) {
-                    // Register to server db
-                } else if (b == RequestType.SUBMIT_ANSWER.toByte()) {
-                    
+                RequestType type = RequestType.fromByte(request.getType());
+                if (type == null) {
+                    System.out.println("Gói tin không hợp lệ!");
+                    continue;
+                }
+                switch (type) {
+                    case LOGIN -> {
+                        // Authentication
+                        LoginPayload login = LoginPayload.fromBytes(request.getData());
+                        Response res = UserService.getInstance().login(login);
+                        if (res.getStatus() == StatusCode.SUCCESS.code()) {
+
+                        } else {
+
+                        }
+                        res.writeToStream(dos);
+                        // Require JDBC (mocking rn)
+                    }
+                    case REGISTER -> {
+                        LoginPayload login = LoginPayload.fromBytes(request.getData());
+                        boolean b = UserService.getInstance().register(login.getUsername(), login.getPassword());
+                        if (b) {
+                            
+                        }
+                    }
+                    case
                 }
             }
         } catch (Exception e) {
-
+            ca
         }
     }
 

@@ -1,22 +1,21 @@
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Enum.java to edit this template
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Record.java to edit this template
  */
 package common;
+
 /**
  *
  * @author PC
  */
-public enum RequestType {
-    LOGIN(1),
-    REGISTER(2),
-    GET_QUIZ(3),
-    SUBMIT_ANSWER(4),
-    GET_LEADERBOARD(5);
+public enum StatusCode {
+    SUCCESS(0),
+    FAIL(1),
+    ERROR(2);
     
     private byte code;
     
-    private RequestType(int id) {
+    private StatusCode(int id) {
         this.code = (byte) id;
     }
     
@@ -24,8 +23,8 @@ public enum RequestType {
         return code;
     }
     
-        public static RequestType fromByte(byte code) {
-        for (RequestType type : RequestType.values()) {
+        public static StatusCode fromByte(byte code) {
+        for (StatusCode type : StatusCode.values()) {
             if (type.code == code) {
                 return type;
             }

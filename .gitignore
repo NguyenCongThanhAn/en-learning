@@ -1,3 +1,6 @@
+# =========================================================================
+# 1. DANH SÁCH BỔ SUNG CỦA BÁC (Java core, Package & Crash logs)
+# =========================================================================
 # Compiled class file
 *.class
 
@@ -22,4 +25,32 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Thư mục build/target cụ thể của dự án
 /EngLearning/target/
+
+# =========================================================================
+# 2. CẤU HÌNH CHẶN FILE RÁC CHO ECLIPSE (Dành cho người kia)
+# =========================================================================
+.metadata/
+.recommenders/
+bin/
+.classpath
+.settings/
+.project
+
+# =========================================================================
+# 3. CẤU HÌNH CHẶN FILE RÁC CHO NETBEANS (Dành cho bác)
+# =========================================================================
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+build/
+
+# =========================================================================
+# 4. FILE HỆ ĐIỀU HÀNH CHUNG
+# =========================================================================
+Thumbs.db
+.DS_Store
