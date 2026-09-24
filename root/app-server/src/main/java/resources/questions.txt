@@ -1,1 +1,7 @@
 
+# Cấu trúc: Câu hỏi | Đáp án A | Đáp án B | Đáp án C | Đáp án D | Đáp án đúng | Tên file ảnh | Tên file âm thanh
+What is this?|Apple|Banana|Candy|Lemon|Candy|candy.jpg|candy.wav
+Which animal says 'Woof'?|Cat|Bird|Dog|Fish|Dog|dog.png|dog.wav
+Which animal says 'Woof'?|cat|dog|pen|Coal|cat|cat.jpg|cat.wav
+what is this?|cat|pen|hat|car|pen|pen.jpg|pen.wav
+what is this?|cat|pen|hat|car|car|car.jpg|car.wav
