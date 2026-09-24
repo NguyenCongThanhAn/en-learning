@@ -1,4 +1,4 @@
-package client;
+package thanhdat.app_client;
 
 import javax.sound.sampled.*;
 import java.io.File;

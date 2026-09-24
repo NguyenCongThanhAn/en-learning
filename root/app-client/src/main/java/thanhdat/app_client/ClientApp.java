@@ -1,4 +1,4 @@
-package client;
+package thanhdat.app_client;
 
 import javax.swing.*;
 import java.awt.*;

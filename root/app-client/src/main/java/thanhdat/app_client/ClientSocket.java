@@ -1,4 +1,4 @@
-package client;
+package thanhdat.app_client;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
