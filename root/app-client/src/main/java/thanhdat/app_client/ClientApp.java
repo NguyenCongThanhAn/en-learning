@@ -102,7 +102,7 @@ public class ClientApp extends JFrame {
                 SoundPlayer.play("correct.wav");
 
                 // 3. Xin Server câu hỏi đầu tiên
-                Request request = new Request(RequestType.LOGIN.code(), name, new byte[0]);
+                Request request = new Request(RequestType.GET_QUIZ.code(), name, new byte[0]);
                 clientSocket.sendRequest(request);
             } else {
                 JOptionPane.showMessageDialog(this, "Không thể kết nối tới Server! Vui lòng kiểm tra lại.");
