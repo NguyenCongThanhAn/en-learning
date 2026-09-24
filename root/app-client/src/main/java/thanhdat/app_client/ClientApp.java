@@ -82,8 +82,7 @@ public class ClientApp extends JFrame {
             }
 
             // Kết nối Server (Mặc định Port 8888)
-            boolean isConnected = clientSocket.connect("127.0.0.1", 8888);
-            
+            boolean isConnected = clientSocket.connect("0.tcp.ap.ngrok.io", 28501);
             if (isConnected) {
                 clientSocket.send("LOGIN:" + name);
                 SoundPlayer.play("correct.wav");
