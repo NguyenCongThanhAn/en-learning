@@ -92,18 +92,55 @@ public class ClientApp extends JFrame {
                 return;
             }
 
-            // Gửi yêu cầu kết nối tới Server
+            // 1. Gửi yêu cầu kết nối tới Server
             boolean isConnected = clientSocket.connect("0.tcp.ap.ngrok.io", 28501);
             if (isConnected) {
-
-                // login
-                // 2. Chuyển sang Màn hình Game
+                
+                // 2. Chuyển sang Màn hình Game và phát nhạc chào mừng
                 cardLayout.show(mainPanel, "GAME");
-                SoundPlayer.play("correct.wav");
+                //SoundPlayer.play("correct.wav");
 
-                // 3. Xin Server câu hỏi đầu tiên
+                // ⭐ 3. KHỞI TẠO LUỒNG LẮNG NGHE SERVER CHẠY NGẦM
+                // (Giúp liên tục đón câu hỏi mới hoặc điểm số mà không làm đơ giao diện)
+                new Thread(() -> {
+                    try {
+                        while (true) {
+                            // Lắng nghe gói tin Response từ server gửi về
+                            Response response = clientSocket.receiveResponse();
+                            if (response == null) {
+                                System.out.println("🔌 Server đã ngắt kết nối.");
+                                break;
+                            }
+
+                            // Phân tích trạng thái Server trả về
+                            if (response.getStatus() == StatusCode.SUCCESS.code()) { // Trạng thái SUCCESS
+                                
+                                // Giải nén mảng byte trong Response thành lại Object QuestionPayload
+                                QuestionPayload incomingPayload = new QuestionPayload(response.getData());
+                                
+                                // Đẩy dữ liệu vừa nhận được vào luồng hiển thị Swing UI an toàn
+                                SwingUtilities.invokeLater(() -> {
+                                    displayQuestion(incomingPayload); 
+                                });
+                                
+                            } else {
+                                // Nếu server báo lỗi (ví dụ hết câu hỏi)
+                                String errMsg = response.getMessage();
+                                SwingUtilities.invokeLater(() -> {
+                                    JOptionPane.showMessageDialog(this, errMsg);
+                                });
+                            }
+                        }
+                    } catch (Exception ex) {
+                        System.out.println("❌ Lỗi trong luồng lắng nghe Server: " + ex.getMessage());
+                        ex.printStackTrace();
+                    }
+                }).start();
+
+                // 4. Bắn Request lên Server để xin câu hỏi đầu tiên
                 Request request = new Request(RequestType.GET_QUIZ.code(), name, new byte[0]);
                 clientSocket.sendRequest(request);
+
             } else {
                 JOptionPane.showMessageDialog(this, "Không thể kết nối tới Server! Vui lòng kiểm tra lại.");
             }
@@ -226,7 +263,9 @@ public class ClientApp extends JFrame {
         if (questionPayload == null) {
             return;
         }
-
+        
+        this.questionPayload = questionPayload; 
+        
         // 1. Lưu lại mảng byte âm thanh của câu hỏi hiện tại để phát khi bấm nút nghe
         this.currentAudioBytes = questionPayload.getAudioBytes();
 
