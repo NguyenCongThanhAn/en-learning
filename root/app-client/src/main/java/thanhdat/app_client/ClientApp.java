@@ -15,8 +15,7 @@ public class ClientApp extends JFrame {
     private JLabel lblQuestionImage;
     private JLabel lblScore;
     private JButton[] btnAnswers = new JButton[4];
-    private String currentCorrectAnswer = "";
-    private int score = 0;
+    private String currentSoundFile = "";
 
     public ClientApp() {
         clientSocket = new ClientSocket();
@@ -50,7 +49,7 @@ public class ClientApp extends JFrame {
     // ==========================================
     private JPanel createLoginPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(new Color(255, 239, 204)); // Vàng kem tươi sáng
+        panel.setBackground(new Color(255, 239, 204));
 
         Box box = Box.createVerticalBox();
 
@@ -81,22 +80,20 @@ public class ClientApp extends JFrame {
                 return;
             }
 
-            // Kết nối Server (Mặc định Port 8888)
+            // Gửi yêu cầu kết nối tới Server
             boolean isConnected = clientSocket.connect("0.tcp.ap.ngrok.io", 28501);
             if (isConnected) {
+                // 1. Gửi tên đăng nhập cho Server
                 clientSocket.send("LOGIN:" + name);
-                SoundPlayer.play("correct.wav");
+                
+                // 2. Chuyển sang Màn hình Game
                 cardLayout.show(mainPanel, "GAME");
-                loadNextQuestionMockup();
+                SoundPlayer.play("correct.wav");
+                
+                // 3. Xin Server câu hỏi đầu tiên
+                clientSocket.send("GET_QUESTION");
             } else {
-                // Nếu chưa bật Server thực tế, vẫn cho chạy chế độ Test Giao diện
-                int choice = JOptionPane.showConfirmDialog(this, 
-                    "Không thấy Server! Bạn có muốn test Giao diện không?", 
-                    "Thông báo", JOptionPane.YES_NO_OPTION);
-                if (choice == JOptionPane.YES_OPTION) {
-                    cardLayout.show(mainPanel, "GAME");
-                    loadNextQuestionMockup();
-                }
+                JOptionPane.showMessageDialog(this, "Không thể kết nối tới Server! Vui lòng kiểm tra lại.");
             }
         });
 
@@ -117,7 +114,7 @@ public class ClientApp extends JFrame {
     // ==========================================
     private JPanel createGamePanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
-        panel.setBackground(new Color(204, 230, 255)); // Xanh nhạt
+        panel.setBackground(new Color(204, 230, 255));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         // Thanh trên cùng: Điểm số
@@ -147,7 +144,12 @@ public class ClientApp extends JFrame {
         btnPlaySound.setFont(new Font("Arial", Font.BOLD, 20));
         btnPlaySound.setBackground(new Color(255, 153, 51));
         btnPlaySound.setForeground(Color.WHITE);
-        btnPlaySound.addActionListener(e -> SoundPlayer.play("cat.wav"));
+        
+        btnPlaySound.addActionListener(e -> {
+            if (!currentSoundFile.isEmpty()) {
+                SoundPlayer.play(currentSoundFile);
+            }
+        });
 
         centerPanel.add(lblQuestionImage);
         centerPanel.add(btnPlaySound);
@@ -163,6 +165,7 @@ public class ClientApp extends JFrame {
             btnAnswers[i].setBackground(Color.WHITE);
 
             int index = i;
+            // Khi bé bấm nút đáp án -> Gửi lựa chọn về cho Server kiểm tra
             btnAnswers[i].addActionListener(e -> handleAnswer(btnAnswers[index].getText()));
             optionsPanel.add(btnAnswers[i]);
         }
@@ -171,41 +174,45 @@ public class ClientApp extends JFrame {
         return panel;
     }
 
-    // Xử lý logic khi bé chọn đáp án
+    // Gửi đáp án bé chọn cho Server
     private void handleAnswer(String selectedOption) {
-        if (selectedOption.equalsIgnoreCase(currentCorrectAnswer)) {
-            SoundPlayer.play("correct.wav");
-            score += 10;
-            lblScore.setText("⭐ Điểm: " + score);
-            JOptionPane.showMessageDialog(this, "🎉 Chính xác! Bé nhận được 10 điểm!");
-            
-            clientSocket.send("ANSWER_CORRECT");
-        } else {
-            SoundPlayer.play("wrong.wav");
-            JOptionPane.showMessageDialog(this, "❌ Chưa đúng rồi, bé thử lại nhé!");
-            
-            clientSocket.send("ANSWER_WRONG");
-        }
+        clientSocket.send("SUBMIT_ANSWER:" + selectedOption);
     }
 
-    // Nạp dữ liệu giả lập để hiển thị giao diện
-    private void loadNextQuestionMockup() {
-        currentCorrectAnswer = "Cat";
+    // =========================================================================
+    // HÀM DÀNH CHO SERVER ĐIỀU KHIỂN GIAO DIỆN CLIENT (PUBLIC)
+    // =========================================================================
 
-        ImageIcon icon = new ImageIcon("resources/images/cat.png");
+    /**
+     * Hàm này được gọi khi nhận tin nhắn chứa câu hỏi từ Server
+     * Ví dụ Server gửi: imageName="cat.png", soundFile="cat.wav", options=["Dog","Cat","Bird","Duck"]
+     */
+    public void displayQuestion(String imageName, String soundFile, String[] options) {
+        this.currentSoundFile = soundFile;
+
+        // 1. Cập nhật hình ảnh từ Server
+        ImageIcon icon = new ImageIcon("resources/images/" + imageName);
         if (icon.getIconWidth() > 0) {
             Image img = icon.getImage().getScaledInstance(200, 200, Image.SCALE_SMOOTH);
             lblQuestionImage.setIcon(new ImageIcon(img));
             lblQuestionImage.setText("");
         } else {
-            lblQuestionImage.setText("📷 [Thêm cat.png vào resources/images]");
+            lblQuestionImage.setIcon(null);
+            lblQuestionImage.setText("📷 [" + imageName + "]");
             lblQuestionImage.setFont(new Font("Arial", Font.BOLD, 14));
         }
 
-        btnAnswers[0].setText("Dog");
-        btnAnswers[1].setText("Cat");
-        btnAnswers[2].setText("Bird");
-        btnAnswers[3].setText("Duck");
+        // 2. Cập nhật chữ trên 4 nút bấm đáp án
+        for (int i = 0; i < 4; i++) {
+            btnAnswers[i].setText(options[i]);
+        }
+    }
+
+    /**
+     * Cập nhật điểm số khi Server trả kết quả
+     */
+    public void updateScore(int newScore) {
+        lblScore.setText("⭐ Điểm: " + newScore);
     }
 
     public static void main(String[] args) {
