@@ -2,7 +2,10 @@ package thanhdat.app_client;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
+import thanhdat.app_client.common.Request;
+import thanhdat.app_client.common.Response;
 
 public class ClientSocket {
     private Socket socket;
@@ -21,30 +24,34 @@ public class ClientSocket {
             return false;
         }
     }
-
-    // Gửi dữ liệu tới Server
-    public void send(String message) {
+public boolean sendRequest(Request request) {
         try {
-            if (out != null) {
-                out.writeUTF(message);
-                out.flush();
+            if (socket == null || socket.isClosed()) {
+                System.out.println("❌ Lỗi: Socket chưa kết nối hoặc đã bị đóng!");
+                return false;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+            request.writeToStream(out); // Gọi hàm tự ghi của Request
+            return true;
+        } catch (IOException e) {
+            System.out.println("❌ Lỗi khi gửi request: " + e.getMessage());
+            return false;
         }
     }
 
-    // Nhận dữ liệu từ Server
-    public String receive() {
+    /**
+     * METHOD 3: Nhận phản hồi Response từ Server (Đọc luồng byte và trả về đối tượng Response)
+     */
+    public Response receiveResponse() {
         try {
-            if (in != null) {
-                return in.readUTF();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+            if (socket == null || socket.isClosed()) return null;
+            // Gọi hàm đọc từ stream của class Response
+            return Response.readFromStream(in); 
+        } catch (IOException e) {
+            System.out.println("❌ Lỗi khi nhận dữ liệu Response từ Server: " + e.getMessage());
+            return null;
         }
-        return null;
     }
+
 
     // Đóng kết nối
     public void close() {

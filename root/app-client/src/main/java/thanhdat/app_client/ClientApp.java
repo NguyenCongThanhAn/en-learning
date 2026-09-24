@@ -4,18 +4,30 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import thanhdat.app_client.common.QuestionPayload;
+import thanhdat.app_client.common.Request;
+import thanhdat.app_client.common.RequestType;
+import thanhdat.app_client.common.Response;
+import thanhdat.app_client.common.StatusCode;
 
 public class ClientApp extends JFrame {
 
     private CardLayout cardLayout;
     private JPanel mainPanel;
     private ClientSocket clientSocket;
+    private int score;
+
+    // câu hỏi
+    private QuestionPayload questionPayload;
 
     // Thành phần Màn hình Game
     private JLabel lblQuestionImage;
     private JLabel lblScore;
     private JButton[] btnAnswers = new JButton[4];
-    private String currentSoundFile = "";
+    private byte[] currentAudioBytes;
 
     public ClientApp() {
         clientSocket = new ClientSocket();
@@ -83,15 +95,15 @@ public class ClientApp extends JFrame {
             // Gửi yêu cầu kết nối tới Server
             boolean isConnected = clientSocket.connect("0.tcp.ap.ngrok.io", 28501);
             if (isConnected) {
-                // 1. Gửi tên đăng nhập cho Server
-                clientSocket.send("LOGIN:" + name);
-                
+
+                // login
                 // 2. Chuyển sang Màn hình Game
                 cardLayout.show(mainPanel, "GAME");
                 SoundPlayer.play("correct.wav");
-                
+
                 // 3. Xin Server câu hỏi đầu tiên
-                clientSocket.send("GET_QUESTION");
+                Request request = new Request(RequestType.LOGIN.code(), name, new byte[0]);
+                clientSocket.sendRequest(request);
             } else {
                 JOptionPane.showMessageDialog(this, "Không thể kết nối tới Server! Vui lòng kiểm tra lại.");
             }
@@ -144,10 +156,13 @@ public class ClientApp extends JFrame {
         btnPlaySound.setFont(new Font("Arial", Font.BOLD, 20));
         btnPlaySound.setBackground(new Color(255, 153, 51));
         btnPlaySound.setForeground(Color.WHITE);
-        
+
         btnPlaySound.addActionListener(e -> {
-            if (!currentSoundFile.isEmpty()) {
-                SoundPlayer.play(currentSoundFile);
+            if (currentAudioBytes != null && currentAudioBytes.length > 0) {
+                // Gọi thẳng hàm mới của SoundPlayer, tự động chạy Thread ngầm bên trong luôn rồi
+                SoundPlayer.play(currentAudioBytes);
+            } else {
+                javax.swing.JOptionPane.showMessageDialog(this, "🔊 Không có dữ liệu âm thanh cho câu hỏi này!");
             }
         });
 
@@ -163,10 +178,15 @@ public class ClientApp extends JFrame {
             btnAnswers[i] = new JButton();
             btnAnswers[i].setFont(new Font("Arial", Font.BOLD, 22));
             btnAnswers[i].setBackground(Color.WHITE);
-
             int index = i;
             // Khi bé bấm nút đáp án -> Gửi lựa chọn về cho Server kiểm tra
-            btnAnswers[i].addActionListener(e -> handleAnswer(btnAnswers[index].getText()));
+            btnAnswers[i].addActionListener(e -> {
+                try {
+                    handleAnswer(btnAnswers[index].getText());
+                } catch (IOException ex) {
+                    Logger.getLogger(ClientApp.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            });
             optionsPanel.add(btnAnswers[i]);
         }
 
@@ -175,36 +195,78 @@ public class ClientApp extends JFrame {
     }
 
     // Gửi đáp án bé chọn cho Server
-    private void handleAnswer(String selectedOption) {
-        clientSocket.send("SUBMIT_ANSWER:" + selectedOption);
+    private void handleAnswer(String selectedOption) throws IOException {
+        if (questionPayload.getCorrectAnswer().equals(selectedOption)) {
+            updateScore(score += 10);
+        }
+        Request request = new Request(RequestType.LOGIN.code(), null, new byte[0]);
+        clientSocket.sendRequest(request);
+        Response response = clientSocket.receiveResponse();
+        if (response.getStatus() == StatusCode.SUCCESS.code()) {
+            questionPayload = new QuestionPayload(response.getData());
+            String[] options = {
+                questionPayload.getAnswerA(),
+                questionPayload.getAnswerB(),
+                questionPayload.getAnswerC(),
+                questionPayload.getAnswerD()
+            };
+            displayQuestion(questionPayload);
+        }
     }
 
     // =========================================================================
     // HÀM DÀNH CHO SERVER ĐIỀU KHIỂN GIAO DIỆN CLIENT (PUBLIC)
     // =========================================================================
-
     /**
-     * Hàm này được gọi khi nhận tin nhắn chứa câu hỏi từ Server
-     * Ví dụ Server gửi: imageName="cat.png", soundFile="cat.wav", options=["Dog","Cat","Bird","Duck"]
+     * Hàm này được gọi khi nhận tin nhắn chứa câu hỏi từ Server Ví dụ Server
+     * gửi: imageName="cat.png", soundFile="cat.wav",
+     * options=["Dog","Cat","Bird","Duck"]
      */
-    public void displayQuestion(String imageName, String soundFile, String[] options) {
-        this.currentSoundFile = soundFile;
+    public void displayQuestion(QuestionPayload payload) {
+        if (questionPayload == null) {
+            return;
+        }
 
-        // 1. Cập nhật hình ảnh từ Server
-        ImageIcon icon = new ImageIcon("resources/images/" + imageName);
-        if (icon.getIconWidth() > 0) {
-            Image img = icon.getImage().getScaledInstance(200, 200, Image.SCALE_SMOOTH);
+        // 1. Lưu lại mảng byte âm thanh của câu hỏi hiện tại để phát khi bấm nút nghe
+        this.currentAudioBytes = questionPayload.getAudioBytes();
+
+        // 2. Cập nhật nội dung câu hỏi chữ (Ví dụ bạn có lblQuestionText trên giao diện)
+        // lblQuestionText.setText(questionPayload.getQuestionText());
+        // 3. Cập nhật hình ảnh trực tiếp từ mảng byte (Không đọc file từ ổ cứng nữa)
+        byte[] imageBytes = questionPayload.getImageBytes();
+
+        if (imageBytes != null && imageBytes.length > 0) {
+            // Khởi tạo ảnh từ mảng byte nhận từ mạng
+            ImageIcon icon = new ImageIcon(imageBytes);
+
+            // Co dãn ảnh về kích thước khung JLabel (Bạn dùng kích thước 220x220 hoặc 200x200 tùy cấu hình giao diện)
+            Image img = icon.getImage().getScaledInstance(220, 220, Image.SCALE_SMOOTH);
             lblQuestionImage.setIcon(new ImageIcon(img));
             lblQuestionImage.setText("");
         } else {
+            // Trường hợp Server không gửi kèm ảnh minh họa
             lblQuestionImage.setIcon(null);
-            lblQuestionImage.setText("📷 [" + imageName + "]");
+            lblQuestionImage.setText("📷 Không có ảnh minh họa");
             lblQuestionImage.setFont(new Font("Arial", Font.BOLD, 14));
         }
 
-        // 2. Cập nhật chữ trên 4 nút bấm đáp án
+        // 4. Trích xuất 4 đáp án từ payload đưa vào mảng
+        String[] options = {
+            questionPayload.getAnswerA(),
+            questionPayload.getAnswerB(),
+            questionPayload.getAnswerC(),
+            questionPayload.getAnswerD()
+        };
+
+        // 5. Cập nhật chữ trên 4 nút bấm đáp án
         for (int i = 0; i < 4; i++) {
-            btnAnswers[i].setText(options[i]);
+            if (btnAnswers[i] != null && options[i] != null) {
+                btnAnswers[i].setText(options[i]);
+
+                // Reset lại trạng thái các nút (nếu ở câu trước bạn có đổi màu nút khi chọn)
+                btnAnswers[i].setEnabled(true);
+                btnAnswers[i].setBackground(null);
+            }
         }
     }
 
